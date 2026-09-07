@@ -84,12 +84,17 @@ def compute(top, lookback, skip):
 def build_message(end, winners, mom, hold, top, lookback):
     weight = 100.0 / len(winners)
     lines = [
-        "<b>📊 قائمة الزخم الشهرية</b>",
-        f"التاريخ: {end}  |  أعلى {top} سهمًا  |  نافذة {lookback} يوم",
-        "━━━━━━━━━━━━━",
+        "📊 <b>قائمة الزخم الشهرية</b>",
+        f"🗓 {end}",
+        f"أعلى {top} أسهم · نافذة {lookback} يوم",
+        "",
+        "<pre>",
+        f"{'#':<3}{'السهم':<7}{'الزخم':>8}{'الوزن':>8}",
+        "─" * 26,
     ]
     for i, tk in enumerate(winners, 1):
-        lines.append(f"{i:>2}. <b>{tk}</b>  ({mom[tk]*100:+.0f}%)  —  {weight:.0f}%")
+        lines.append(f"{i:<3}{tk:<7}{mom[tk]*100:>+7.0f}%{weight:>7.0f}%")
+    lines.append("</pre>")
 
     if hold:
         cur = set(h.strip().upper() for h in hold)
@@ -98,18 +103,18 @@ def build_message(end, winners, mom, hold, top, lookback):
         buy = sorted(target - cur)
         keep = sorted(cur & target)
         lines += [
-            "━━━━━━━━━━━━━",
-            "<b>إعادة الموازنة:</b>",
-            f"🔴 بِع: {', '.join(sell) if sell else '— لا شيء'}",
-            f"🟢 اشترِ: {', '.join(buy) if buy else '— لا شيء'}",
-            f"⚪ أبقِ: {', '.join(keep) if keep else '— لا شيء'}",
+            "",
+            "🔄 <b>إعادة الموازنة</b>",
+            f"🔴 بِيع: <code>{', '.join(sell) if sell else '—'}</code>",
+            f"🟢 اشترِ: <code>{', '.join(buy) if buy else '—'}</code>",
+            f"⚪️ انتظر: <code>{', '.join(keep) if keep else '—'}</code>",
         ]
         if not sell and not buy:
-            lines.append("محفظتك مطابقة — لا تغيير هذا الشهر.")
+            lines.append("✅ محفظتك مطابقة — لا تغيير")
 
     lines += [
-        "━━━━━━━━━━━━━",
-        "⚠️ تطبيق ورقي أولًا · ليس نصيحة مالية · الأداء الماضي لا يضمن المستقبل.",
+        "",
+        "⚠️ <i>تنبيه· ليست نصيحة مالية</i>",
     ]
     return "\n".join(lines)
 
