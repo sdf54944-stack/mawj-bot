@@ -3,34 +3,9 @@ import sys
 import datetime as dt
 import requests
  
-import time as _time
- 
-# علامات تكشف أن الناتج ليس ترجمة بل رسالة خطأ/صفحة حظر
-_BAD_MARKERS = ("error 500", "server error", "that\u2019s an error",
-                "that\u2019s all we know", "try again later", "<html", "429", "captcha")
- 
-def _looks_bad(s):
-    if not s:
-        return True
-    low = s.lower()
-    return any(m in low for m in _BAD_MARKERS)
- 
 def translate_ar(text):
-    """يترجم للعربية عبر deep-translator. عند أي فشل أو رد يشبه رسالة خطأ يُعيد النص الإنجليزي الأصلي."""
-    try:
-        from deep_translator import GoogleTranslator
-    except Exception:
-        return text  # المكتبة غير مثبّتة -> إنجليزي نظيف
-    for attempt in range(3):
-        try:
-            out = GoogleTranslator(source="auto", target="ar").translate(text)
-            if out and not _looks_bad(out):
-                return out
-            # ناتج يشبه خطأ -> جرّب مرة أخرى بعد تأخير قصير
-        except Exception:
-            pass
-        _time.sleep(3.0)
-    return text  # فشل الترجمة -> أرجِع الإنجليزي الأصلي (لا رسالة خطأ أبدًا)
+    """معطّلة: نُبقي العناوين بالإنجليزية (الترجمة المجانية غير موثوقة على السحابة)."""
+    return text
  
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -122,7 +97,7 @@ def get_economic_events():
     return out[:12]
  
  
-def get_headlines(limit=6):
+def get_headlines(limit=8):
     """عناوين مفلترة بكلمات مفتاحية (اقتصاد كلّي/أسواق)، بلا ضجيج، بلا تكرار."""
     try:
         import feedparser
@@ -148,9 +123,7 @@ def get_headlines(limit=6):
             if key in seen:
                 continue
             seen.add(key)
-            title_ar = translate_ar(title)
-            _time.sleep(2.5)  # تباعد أطول بين الطلبات لرفع نسبة نجاح الترجمة
-            heads.append(f"• {title_ar}  <i>({src})</i>")
+            heads.append(f"• {title}  <i>({src})</i>")
             if len(heads) >= limit:
                 break
         if len(heads) >= limit:
