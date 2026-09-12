@@ -21,7 +21,7 @@ def translate_ar(text):
         from deep_translator import GoogleTranslator
     except Exception:
         return text  # المكتبة غير مثبّتة -> إنجليزي نظيف
-    for attempt in range(2):
+    for attempt in range(3):
         try:
             out = GoogleTranslator(source="auto", target="ar").translate(text)
             if out and not _looks_bad(out):
@@ -29,7 +29,7 @@ def translate_ar(text):
             # ناتج يشبه خطأ -> جرّب مرة أخرى بعد تأخير قصير
         except Exception:
             pass
-        _time.sleep(1.2)
+        _time.sleep(3.0)
     return text  # فشل الترجمة -> أرجِع الإنجليزي الأصلي (لا رسالة خطأ أبدًا)
  
 try:
@@ -122,7 +122,7 @@ def get_economic_events():
     return out[:12]
  
  
-def get_headlines(limit=8):
+def get_headlines(limit=6):
     """عناوين مفلترة بكلمات مفتاحية (اقتصاد كلّي/أسواق)، بلا ضجيج، بلا تكرار."""
     try:
         import feedparser
@@ -149,7 +149,7 @@ def get_headlines(limit=8):
                 continue
             seen.add(key)
             title_ar = translate_ar(title)
-            _time.sleep(0.4)  # تباعد بسيط بين الطلبات لتقليل الحظر
+            _time.sleep(2.5)  # تباعد أطول بين الطلبات لرفع نسبة نجاح الترجمة
             heads.append(f"• {title_ar}  <i>({src})</i>")
             if len(heads) >= limit:
                 break
