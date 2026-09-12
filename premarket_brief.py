@@ -3,6 +3,14 @@ import sys
 import datetime as dt
 import requests
  
+def translate_ar(text):
+    """يترجم نصًّا للعربية عبر deep-translator (Google، مجاني بلا مفتاح). يُعيد الأصل عند الفشل."""
+    try:
+        from deep_translator import GoogleTranslator
+        return GoogleTranslator(source="auto", target="ar").translate(text)
+    except Exception:
+        return text
+ 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:
@@ -14,20 +22,20 @@ FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
  
 # مصادر RSS موثوقة نسبيًا (عناوين عامة للأسواق)
 RSS_FEEDS = [
-    ("العربية/أسواق",   "https://www.alarabiya.net/feed/rss2/ar/aswaq.xml"),
-    ("العربية/اقتصاد",  "https://www.alarabiya.net/feed/rss2/ar/economy.xml"),
-    ("CNN الاقتصادية",  "https://cnnbusinessarabic.com/feed"),
-    ("CNBC عربية",      "https://www.cnbcarabia.com/rss"),
+    ("CNBC Markets",     "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15839135"),
+    ("CNBC Economy",     "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258"),
+    ("MarketWatch Mkts", "https://feeds.content.dowjones.io/public/rss/mw_marketpulse"),
+    ("MarketWatch Top",  "https://feeds.content.dowjones.io/public/rss/mw_topstories"),
 ]
  
 # كلمات مفتاحية تُبقي العناوين المؤثّرة على السوق وتحذف الضجيج
 KEYWORDS = [
-    "فائدة", "الفيدرالي", "المركزي", "الفائدة", "التضخم", "تضخم", "أسعار",
-    "أسهم", "سهم", "السوق", "الأسواق", "بورصة", "مؤشر", "وول ستريت", "ناسداك",
-    "أرباح", "إيرادات", "نتائج", "توقعات", "الذهب", "النفط", "الدولار", "عملات",
-    "سندات", "عوائد", "اقتصاد", "ركود", "نمو", "بطالة", "وظائف", "رقائق",
-    "الذكاء الاصطناعي", "نفيديا", "آبل", "مايكروسوفت", "تسلا", "أمازون",
-    "fed", "cpi", "gdp", "s&p", "nasdaq",
+    "fed", "federal reserve", "fomc", "powell", "rate", "rates", "interest",
+    "inflation", "cpi", "pce", "gdp", "jobs", "payroll", "unemployment", "labor",
+    "earnings", "guidance", "revenue", "profit", "stocks", "market", "markets",
+    "s&p", "nasdaq", "dow", "yields", "treasury", "bond", "recession", "economy",
+    "gold", "oil", "tariff", "trade", "dollar", "chip", "semiconductor", "ai",
+    "nvidia", "apple", "microsoft", "tesla", "amazon", "meta",
 ]
  
 # دول تهمّنا (تأثير على الأسهم الأمريكية والذهب)
@@ -119,7 +127,8 @@ def get_headlines(limit=8):
             if key in seen:
                 continue
             seen.add(key)
-            heads.append(f"• {title}  <i>({src})</i>")
+            title_ar = translate_ar(title)
+            heads.append(f"• {title_ar}  <i>({src})</i>")
             if len(heads) >= limit:
                 break
         if len(heads) >= limit:
