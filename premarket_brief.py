@@ -3,13 +3,34 @@ import sys
 import datetime as dt
 import requests
  
+import time as _time
+ 
+# علامات تكشف أن الناتج ليس ترجمة بل رسالة خطأ/صفحة حظر
+_BAD_MARKERS = ("error 500", "server error", "that\u2019s an error",
+                "that\u2019s all we know", "try again later", "<html", "429", "captcha")
+ 
+def _looks_bad(s):
+    if not s:
+        return True
+    low = s.lower()
+    return any(m in low for m in _BAD_MARKERS)
+ 
 def translate_ar(text):
-    """يترجم نصًّا للعربية عبر deep-translator (Google، مجاني بلا مفتاح). يُعيد الأصل عند الفشل."""
+    """يترجم للعربية عبر deep-translator. عند أي فشل أو رد يشبه رسالة خطأ يُعيد النص الإنجليزي الأصلي."""
     try:
         from deep_translator import GoogleTranslator
-        return GoogleTranslator(source="auto", target="ar").translate(text)
     except Exception:
-        return text
+        return text  # المكتبة غير مثبّتة -> إنجليزي نظيف
+    for attempt in range(2):
+        try:
+            out = GoogleTranslator(source="auto", target="ar").translate(text)
+            if out and not _looks_bad(out):
+                return out
+            # ناتج يشبه خطأ -> جرّب مرة أخرى بعد تأخير قصير
+        except Exception:
+            pass
+        _time.sleep(1.2)
+    return text  # فشل الترجمة -> أرجِع الإنجليزي الأصلي (لا رسالة خطأ أبدًا)
  
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -128,6 +149,7 @@ def get_headlines(limit=8):
                 continue
             seen.add(key)
             title_ar = translate_ar(title)
+            _time.sleep(0.4)  # تباعد بسيط بين الطلبات لتقليل الحظر
             heads.append(f"• {title_ar}  <i>({src})</i>")
             if len(heads) >= limit:
                 break
