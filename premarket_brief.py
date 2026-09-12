@@ -2,38 +2,38 @@ import os
 import sys
 import datetime as dt
 import requests
-
+ 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:
     pass
-
+ 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 CHAT_ID = os.environ.get("CHAT_ID", "")
 FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
-
+ 
 # مصادر RSS موثوقة نسبيًا (عناوين عامة للأسواق)
 RSS_FEEDS = [
-    ("CNBC Markets",     "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15839135"),
-    ("CNBC Economy",     "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258"),
-    ("MarketWatch Mkts", "https://feeds.content.dowjones.io/public/rss/mw_marketpulse"),
-    ("MarketWatch Top",  "https://feeds.content.dowjones.io/public/rss/mw_topstories"),
+    ("العربية/أسواق",   "https://www.alarabiya.net/feed/rss2/ar/aswaq.xml"),
+    ("العربية/اقتصاد",  "https://www.alarabiya.net/feed/rss2/ar/economy.xml"),
+    ("CNN الاقتصادية",  "https://cnnbusinessarabic.com/feed"),
+    ("CNBC عربية",      "https://www.cnbcarabia.com/rss"),
 ]
-
+ 
 # كلمات مفتاحية تُبقي العناوين المؤثّرة على السوق وتحذف الضجيج
 KEYWORDS = [
-    "fed", "federal reserve", "fomc", "powell", "rate", "rates", "interest",
-    "inflation", "cpi", "pce", "gdp", "jobs", "payroll", "unemployment", "labor",
-    "earnings", "guidance", "revenue", "profit", "stocks", "market", "markets",
-    "s&p", "nasdaq", "dow", "yields", "treasury", "bond", "recession", "economy",
-    "gold", "oil", "tariff", "trade", "dollar", "chip", "semiconductor", "ai",
-    "nvidia", "apple", "microsoft", "tesla", "amazon", "meta",
+    "فائدة", "الفيدرالي", "المركزي", "الفائدة", "التضخم", "تضخم", "أسعار",
+    "أسهم", "سهم", "السوق", "الأسواق", "بورصة", "مؤشر", "وول ستريت", "ناسداك",
+    "أرباح", "إيرادات", "نتائج", "توقعات", "الذهب", "النفط", "الدولار", "عملات",
+    "سندات", "عوائد", "اقتصاد", "ركود", "نمو", "بطالة", "وظائف", "رقائق",
+    "الذكاء الاصطناعي", "نفيديا", "آبل", "مايكروسوفت", "تسلا", "أمازون",
+    "fed", "cpi", "gdp", "s&p", "nasdaq",
 ]
-
+ 
 # دول تهمّنا (تأثير على الأسهم الأمريكية والذهب)
 COUNTRIES = {"US", "United States", "EA", "Euro Zone", "GB", "United Kingdom"}
-
-
+ 
+ 
 def send_telegram(text):
     if not BOT_TOKEN or not CHAT_ID:
         print("[X] BOT_TOKEN / CHAT_ID غير مضبوطين.")
@@ -51,8 +51,8 @@ def send_telegram(text):
     except Exception as e:
         print(f"[X] خطأ تليجرام: {e}")
         return False
-
-
+ 
+ 
 def get_economic_events():
     """أحداث اليوم عالية/متوسطة الأهمية من FMP. يُعيد قائمة أسطر جاهزة."""
     if not FMP_API_KEY:
@@ -67,7 +67,7 @@ def get_economic_events():
         data = r.json()
     except Exception as e:
         return [f"⚠️ خطأ جلب التقويم: {e}"]
-
+ 
     out = []
     for ev in data:
         country = str(ev.get("country", ""))
@@ -91,8 +91,8 @@ def get_economic_events():
     if not out:
         out = ["🟢 لا أحداث اقتصادية كبيرة اليوم."]
     return out[:12]
-
-
+ 
+ 
 def get_headlines(limit=8):
     """عناوين مفلترة بكلمات مفتاحية (اقتصاد كلّي/أسواق)، بلا ضجيج، بلا تكرار."""
     try:
@@ -125,8 +125,8 @@ def get_headlines(limit=8):
         if len(heads) >= limit:
             break
     return heads if heads else ["🟢 لا عناوين مؤثّرة بارزة الآن."]
-
-
+ 
+ 
 def build_message():
     now = dt.datetime.now(dt.timezone.utc)
     # التقويم الاقتصادي مُعطّل (لا مصدر مجاني موثوق) — عناوين فقط
@@ -145,8 +145,8 @@ def build_message():
         "⚠️ <i>لا تدع الأخبار تكسر انضباط استراتيجية الزخم الشهرية.</i>",
     ]
     return "\n".join(lines)
-
-
+ 
+ 
 def main():
     print("بناء ملخّص ما قبل الافتتاح ...")
     msg = build_message()
@@ -158,7 +158,7 @@ def main():
         print("(--print_only) لم تُرسل.")
         return
     send_telegram(msg)
-
-
+ 
+ 
 if __name__ == "__main__":
     main()
