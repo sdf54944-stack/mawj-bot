@@ -24,4 +24,4 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: python momentum_telegram.py --top 10 --lookback 126
+        run: python momentum_telegram.py --top 10 --lookback 126 --capital 1000
