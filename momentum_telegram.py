@@ -1,24 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-============================================================================
-قائمة الزخم الشهرية -> تليجرام مباشرة
-============================================================================
-يحسب أعلى N سهمًا بالزخم ويرسل القائمة لبوت تليجرام (نفس بوت MAWJ).
-شغّله شهريًا (أو اجدوِله لاحقًا). تصلك القائمة كرسالة عربية أنيقة.
-
-الأسرار من متغيّرات البيئة (لا تُكتب في الكود):
-  BOT_TOKEN , CHAT_ID    (نفس قيم بوت MAWJ السابق)
-
-التثبيت:  pip install yfinance pandas numpy requests
-التشغيل (ويندوز PowerShell): مرّر الأسرار مؤقتًا في نفس الجلسة ثم شغّل:
-  $env:BOT_TOKEN="ضع_التوكن";  $env:CHAT_ID="ضع_المعرّف"
-  py -X utf8 momentum_telegram.py --top 10 --lookback 126 --hold "AAPL,MSFT"
-
-ملاحظة صدق: قائمة مبنية على بيانات تاريخية؛ الأداء الماضي لا يضمن المستقبل.
-هذا ليس نصيحة مالية — القرار والمسؤولية لك.
-============================================================================
-"""
-
 import argparse
 import os
 import sys
@@ -78,23 +57,26 @@ def compute(top, lookback, skip):
     p_start = px.iloc[-1 - skip - lookback]
     mom = ((p_end / p_start) - 1.0).dropna().sort_values(ascending=False)
     winners = list(mom.head(top).index)
-    return end, winners, mom
+    prices = px.iloc[-1]  # آخر سعر متاح لكل سهم
+    return end, winners, mom, prices
 
 
-def build_message(end, winners, mom, hold, top, lookback):
+def build_message(end, winners, mom, prices, hold, top, lookback, capital):
     weight = 100.0 / len(winners)
+    per_stock = capital * weight / 100.0   # المبلغ المخصّص لكل سهم
     lines = [
-        "📊 <b>قائمة الزخم الشهرية</b>",
-        f"🗓 {end}",
-        f"أعلى {top} أسهم · نافذة {lookback} يوم",
-        "",
-        "<pre>",
-        f"{'#':<3}{'السهم':<7}{'الزخم':>8}{'الوزن':>8}",
-        "─" * 26,
+        "<b>📊 قائمة الزخم الشهرية</b>",
+        f"التاريخ: {end}  |  أعلى {top} سهمًا  |  محفظة ${capital:,.0f}",
+        "━━━━━━━━━━━━━",
     ]
     for i, tk in enumerate(winners, 1):
-        lines.append(f"{i:<3}{tk:<7}{mom[tk]*100:>+7.0f}%{weight:>7.0f}%")
-    lines.append("</pre>")
+        px_now = float(prices.get(tk, float("nan")))
+        shares = int(per_stock // px_now) if px_now and px_now == px_now and px_now > 0 else 0
+        cost = shares * px_now if px_now == px_now else 0
+        lines.append(
+            f"{i:>2}. <b>{tk}</b>  ({mom[tk]*100:+.0f}%)\n"
+            f"     💲{px_now:,.2f}  →  <b>{shares}</b> سهم  (${cost:,.0f})"
+        )
 
     if hold:
         cur = set(h.strip().upper() for h in hold)
@@ -103,18 +85,19 @@ def build_message(end, winners, mom, hold, top, lookback):
         buy = sorted(target - cur)
         keep = sorted(cur & target)
         lines += [
-            "",
-            "🔄 <b>إعادة الموازنة</b>",
-            f"🔴 بِيع: <code>{', '.join(sell) if sell else '—'}</code>",
-            f"🟢 اشترِ: <code>{', '.join(buy) if buy else '—'}</code>",
-            f"⚪️ انتظر: <code>{', '.join(keep) if keep else '—'}</code>",
+            "━━━━━━━━━━━━━",
+            "<b>إعادة الموازنة:</b>",
+            f"🔴 بِع: {', '.join(sell) if sell else '— لا شيء'}",
+            f"🟢 اشترِ: {', '.join(buy) if buy else '— لا شيء'}",
+            f"⚪ أبقِ: {', '.join(keep) if keep else '— لا شيء'}",
         ]
         if not sell and not buy:
-            lines.append("✅ محفظتك مطابقة — لا تغيير")
+            lines.append("محفظتك مطابقة — لا تغيير هذا الشهر.")
 
     lines += [
-        "",
-        "⚠️ <i>تنبيه· ليست نصيحة مالية</i>",
+        "━━━━━━━━━━━━━",
+        "💡 السعر للتنفيذ لا للتوقيت — اشترِ بسعر السوق فورًا، لا تنتظر «سعرًا أفضل».",
+        "⚠️ تطبيق ورقي أولًا · ليس نصيحة مالية · الأداء الماضي لا يضمن المستقبل.",
     ]
     return "\n".join(lines)
 
@@ -125,18 +108,19 @@ def main():
     ap.add_argument("--lookback", type=int, default=126)
     ap.add_argument("--skip", type=int, default=21)
     ap.add_argument("--hold", default="")
+    ap.add_argument("--capital", type=float, default=10000, help="حجم المحفظة بالدولار لحساب عدد الأسهم")
     ap.add_argument("--print_only", action="store_true", help="اطبع الرسالة بلا إرسال (للتجربة)")
     args = ap.parse_args()
 
     print(f"حساب قائمة الزخم (top={args.top}, lookback={args.lookback}) ...")
     try:
-        end, winners, mom = compute(args.top, args.lookback, args.skip)
+        end, winners, mom, prices = compute(args.top, args.lookback, args.skip)
     except Exception as e:
         print(f"[X] فشل الحساب: {e}")
         sys.exit(1)
 
     hold = [h for h in args.hold.split(",") if h.strip()]
-    msg = build_message(end, winners, mom, hold, args.top, args.lookback)
+    msg = build_message(end, winners, mom, prices, hold, args.top, args.lookback, args.capital)
 
     print("\n--- الرسالة ---")
     # اطبع نسخة بلا وسوم HTML للعرض في الطرفية
