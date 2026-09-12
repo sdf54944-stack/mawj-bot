@@ -1,0 +1,21 @@
+name: Pre-Market Brief
+
+on:
+  schedule:
+    - cron: '0 12 * * 1-5'   # أيام العمل 12:00 UTC (قبل افتتاح نيويورك 9:30)
+  workflow_dispatch:
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests feedparser
+      - env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+        run: python premarket_brief.py
