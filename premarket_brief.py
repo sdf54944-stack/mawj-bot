@@ -1,27 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-============================================================================
-ملخّص ما قبل الافتتاح -> تليجرام  (تقويم اقتصادي + عناوين)
-============================================================================
-يرسل قبل افتتاح السوق الأمريكي:
-  • أحداث التقويم الاقتصادي اليوم (عالية/متوسطة الأهمية) — وقائعي.
-  • عناوين أخبار مختصرة من مصادر RSS موثوقة نسبيًا — بلا تصنيف اتجاه.
-
-مبدأ صارم: حقائق وعناوين فقط. لا "صاعد/هابط"، لا توصيات، لا تكهّن.
-الحكم على التأثير لك وحدك. ولا تدع الأخبار تكسر انضباط استراتيجية الزخم.
-
-الأسرار من متغيّرات البيئة:
-  BOT_TOKEN , CHAT_ID          (نفس بوت MAWJ)
-  FMP_API_KEY                  (مفتاح مجاني من financialmodelingprep.com)
-
-التثبيت:  pip install requests feedparser
-التشغيل:  py -X utf8 premarket_brief.py
-
-ملاحظة صدق: البوت ناقل لا مُدقّق. عامِل العناوين كنقطة بداية للبحث، لا حقائق نهائية.
-هذا ليس نصيحة مالية.
-============================================================================
-"""
-
 import os
 import sys
 import datetime as dt
@@ -38,9 +14,20 @@ FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
 
 # مصادر RSS موثوقة نسبيًا (عناوين عامة للأسواق)
 RSS_FEEDS = [
-    ("Yahoo Finance", "https://finance.yahoo.com/news/rssindex"),
-    ("MarketWatch Top", "https://feeds.content.dowjones.io/public/rss/mw_topstories"),
-    ("Investing.com", "https://www.investing.com/rss/news_25.rss"),
+    ("CNBC Markets",     "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15839135"),
+    ("CNBC Economy",     "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258"),
+    ("MarketWatch Mkts", "https://feeds.content.dowjones.io/public/rss/mw_marketpulse"),
+    ("MarketWatch Top",  "https://feeds.content.dowjones.io/public/rss/mw_topstories"),
+]
+
+# كلمات مفتاحية تُبقي العناوين المؤثّرة على السوق وتحذف الضجيج
+KEYWORDS = [
+    "fed", "federal reserve", "fomc", "powell", "rate", "rates", "interest",
+    "inflation", "cpi", "pce", "gdp", "jobs", "payroll", "unemployment", "labor",
+    "earnings", "guidance", "revenue", "profit", "stocks", "market", "markets",
+    "s&p", "nasdaq", "dow", "yields", "treasury", "bond", "recession", "economy",
+    "gold", "oil", "tariff", "trade", "dollar", "chip", "semiconductor", "ai",
+    "nvidia", "apple", "microsoft", "tesla", "amazon", "meta",
 ]
 
 # دول تهمّنا (تأثير على الأسهم الأمريكية والذهب)
@@ -106,39 +93,49 @@ def get_economic_events():
     return out[:12]
 
 
-def get_headlines(limit=6):
-    """عناوين مختصرة من RSS. يُعيد قائمة أسطر."""
+def get_headlines(limit=8):
+    """عناوين مفلترة بكلمات مفتاحية (اقتصاد كلّي/أسواق)، بلا ضجيج، بلا تكرار."""
     try:
         import feedparser
     except Exception:
         return ["⚠️ feedparser غير مثبّت — تخطّي العناوين."]
+    seen = set()
     heads = []
     for src, url in RSS_FEEDS:
         try:
             feed = feedparser.parse(url)
-            for entry in feed.entries[:3]:
-                title = entry.get("title", "").strip()
-                if title:
-                    heads.append(f"• {title}  <i>({src})</i>")
         except Exception:
             continue
-    return heads[:limit] if heads else ["⚠️ تعذّر جلب العناوين حاليًا."]
+        for entry in feed.entries[:15]:
+            title = entry.get("title", "").strip()
+            if not title:
+                continue
+            low = title.lower()
+            # فلترة: يجب أن يحوي العنوان كلمة مفتاحية واحدة على الأقل
+            if not any(k in low for k in KEYWORDS):
+                continue
+            # منع التكرار (عنوان متشابه من مصدرين)
+            key = low[:50]
+            if key in seen:
+                continue
+            seen.add(key)
+            heads.append(f"• {title}  <i>({src})</i>")
+            if len(heads) >= limit:
+                break
+        if len(heads) >= limit:
+            break
+    return heads if heads else ["🟢 لا عناوين مؤثّرة بارزة الآن."]
 
 
 def build_message():
     now = dt.datetime.now(dt.timezone.utc)
-    events = get_economic_events()
+    # التقويم الاقتصادي مُعطّل (لا مصدر مجاني موثوق) — عناوين فقط
     heads = get_headlines()
     lines = [
         "🌅 <b>ملخّص ما قبل الافتتاح</b>",
         f"🗓 {now.date()}",
         "",
-        "📅 <b>التقويم الاقتصادي اليوم</b>",
-    ]
-    lines += events
-    lines += [
-        "",
-        "📰 <b>عناوين الأسواق</b>",
+        "📰 <b>أبرز عناوين الأسواق</b>",
     ]
     lines += heads
     lines += [
