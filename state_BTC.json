@@ -1,9 +1,9 @@
 {
-  "pos": -1,
-  "entry": 65688.59,
-  "stop": 65688.59,
-  "tp1": 61359.02214285713,
-  "tp2": 57029.454285714266,
-  "t1done": true,
-  "last_bar": "2026-11-20 20:00:00"
+  "pos": 0,
+  "entry": null,
+  "stop": null,
+  "tp1": null,
+  "tp2": null,
+  "t1done": false,
+  "last_bar": "2026-11-21 04:00:00"
 }
